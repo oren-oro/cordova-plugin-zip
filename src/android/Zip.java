@@ -116,16 +116,24 @@ public class Zip extends CordovaPlugin {
             byte[] buffer = new byte[32 * 1024];
             boolean anyEntries = false;
 
+            String canonicalOutputDir = outputDir.getCanonicalPath();
             while ((ze = zis.getNextEntry()) != null)
             {
                 anyEntries = true;
                 String compressedName = ze.getName();
 
                 if (ze.isDirectory()) {
-                   File dir = new File(outputDirectory + compressedName);
-                   dir.mkdirs();
+                    File dir = new File(outputDirectory + compressedName);
+                    dir.mkdirs();
                 } else {
                     File file = new File(outputDirectory + compressedName);
+                    String canonicalPath = file.getCanonicalPath();
+                    if (!canonicalPath.startsWith(canonicalOutputDir)) {
+                        String errorMessage = "Zip traversal security error";
+                        callbackContext.error(errorMessage);
+                        Log.e(LOG_TAG, errorMessage);
+                        return;
+                    }
                     file.getParentFile().mkdirs();
                     if(file.exists() || file.createNewFile()){
                         Log.w("Zip", "extracting: " + file.getPath());
@@ -200,7 +208,7 @@ public class Zip extends CordovaPlugin {
         public JSONObject toJSONObject() throws JSONException {
             return new JSONObject(
                     "{loaded:" + loaded +
-                    ",total:" + total + "}");
+                            ",total:" + total + "}");
         }
     }
 }
